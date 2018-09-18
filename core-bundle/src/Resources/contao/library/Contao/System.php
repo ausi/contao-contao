@@ -604,6 +604,8 @@ abstract class System
 			}
 		}
 
+		new \Contao\NewsModel();
+
 		return $arrReturn;
 	}
 
