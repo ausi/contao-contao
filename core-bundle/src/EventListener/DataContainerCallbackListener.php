@@ -72,7 +72,8 @@ class DataContainerCallbackListener
         krsort($callbacks, SORT_NUMERIC);
 
         if (empty($dcaRef) || array_keys($callbacks)[0] >= 0) {
-            $dcaRef = array_values($callbacks[array_keys($callbacks)[0]])[0];
+            $callbacks = array_shift($callbacks);
+            $dcaRef = array_shift($callbacks);
         }
     }
 
