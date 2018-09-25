@@ -78,7 +78,7 @@ class DataContainerCallbackListener
 
     private function addCallbacks(?array &$dcaRef, array $callbacks): void
     {
-        if (!\is_array($dcaRef)) {
+        if (null === $dcaRef) {
             $dcaRef = [];
         }
 
