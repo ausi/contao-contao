@@ -12,6 +12,8 @@ services:
         arguments:
             - '@contao.framework'
 
+    Contao\CoreBundle\Command\ConfigEditorCommand: ~
+
     contao.command.crawl:
         class: Contao\CoreBundle\Command\CrawlCommand
         arguments:
