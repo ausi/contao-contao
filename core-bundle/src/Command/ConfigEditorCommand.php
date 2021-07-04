@@ -16,6 +16,7 @@ use Symfony\Bundle\FrameworkBundle\Command\AbstractConfigCommand;
 use Symfony\Component\Config\Definition\ArrayNode;
 use Symfony\Component\Config\Definition\BaseNode;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\Config\Definition\EnumNode;
 use Symfony\Component\Config\Definition\NodeInterface;
 use Symfony\Component\Config\Definition\PrototypedArrayNode;
 use Symfony\Component\Console\Input\InputInterface;
@@ -50,19 +51,27 @@ class ConfigEditorCommand extends AbstractConfigCommand
         // The configurations to edit
         // Probably provided by the manager plugins
         $configurations = [
+            #'twig',
+            #'scheb_two_factor',
             'contao',
             'nelmio_security.clickjacking.paths',
             'framework.mailer.transports',
+            #'framework.mailer.message_bus',
         ];
 
         $filter = array_map(
             static function ($configPath) {
-                return substr($configPath, 0, strpos($configPath, '.') ?: null);
+                return substr($configPath, 0, strpos($configPath, '.') ?: PHP_INT_MAX);
             },
             $configurations
         );
 
         $editorInfo = [];
+
+        // Predefine order
+        foreach ($filter as $key) {
+            $editorInfo[$key] = [];
+        }
 
         foreach ($this->getApplication()->getKernel()->getBundles() as $bundle) {
             $key = $bundle->getName();
@@ -91,7 +100,7 @@ class ConfigEditorCommand extends AbstractConfigCommand
             }
         }
 
-        $io->writeln(json_encode($editorInfo, JSON_PRETTY_PRINT));
+        $io->writeln(json_encode($editorInfo/*, JSON_PRETTY_PRINT*/));
 
         return 0;
     }
@@ -111,16 +120,32 @@ class ConfigEditorCommand extends AbstractConfigCommand
         $fields = [];
 
         foreach ($this->getNodesFromPaths($configuration->getConfigTreeBuilder()->buildTree(), $paths) as $node) {
-            $nodePath = $node->getPath();
-            $nodePath = ltrim(substr($nodePath, strpos($nodePath, '.') ?: 999).'.', '.');
-            $fields = array_merge($fields, $this->getFieldsFromNode($node, $nodePath));
+            $fields = array_replace_recursive($fields, $this->getNestedFieldsFromNode($node));
         }
 
-        return [
-            'name' => $bundle->getName(),
-            'alias' => $extension->getAlias(),
-            'fields' => $fields,
-        ];
+        return array_merge(
+            [
+                'bundleName' => $bundle->getName(),
+                'bundleAlias' => $extension->getAlias(),
+            ],
+            $fields[$extension->getAlias()],
+        );
+    }
+
+    private function getNestedFieldsFromNode(NodeInterface $node)
+    {
+        $fields[$node->getName()] = $this->getConfigFromNode($node);
+
+        while ($node instanceof BaseNode && $node->getParent()) {
+            $node = $node->getParent();
+            $fields = [
+                $node->getName() => array_merge($this->getConfigFromNode($node, true), [
+                    "fields" => $fields,
+                ]),
+            ];
+        }
+
+        return $fields;
     }
 
     private function getNodesFromPaths(ArrayNode $node, array $paths): array
@@ -157,24 +182,23 @@ class ConfigEditorCommand extends AbstractConfigCommand
 
         foreach ($node->getChildren() as $name => $child) {
             $fullName = $fieldPrefix.$name;
-
-            if ($child instanceof ArrayNode && !$node instanceof PrototypedArrayNode && \count($child->getChildren())) {
-                $fields = array_merge($fields, $this->getFieldsFromNode($child, $fullName.'.'));
-                continue;
-            }
             $fields[$fullName] = $this->getConfigFromNode($child);
         }
 
         return $fields;
     }
 
-    private function getConfigFromNode(BaseNode $node): array
+    private function getConfigFromNode(BaseNode $node, bool $skipChildren = false): array
     {
         $config = [
             'attributes' => $node->getAttributes(),
             'type' => preg_replace('/^Symfony\\\\Component\\\\Config\\\\Definition\\\\/', '', \get_class($node)),
             'required' => $node->isRequired(),
         ];
+
+        if ($node instanceof EnumNode) {
+            $config['values'] = $node->getValues();
+        }
 
         if ($node->isDeprecated()) {
             $config['deprecation'] = $node->getDeprecation($node->getName(), $node->getPath());
@@ -186,11 +210,12 @@ class ConfigEditorCommand extends AbstractConfigCommand
 
         if ($node instanceof PrototypedArrayNode) {
             $config['key'] = $node->getKeyAttribute();
-            $config['prototype'] = $this->getConfigFromNode($node->getPrototype());
-
-            if ($node->getPrototype() instanceof ArrayNode && !$node->getPrototype() instanceof PrototypedArrayNode) {
-                $config['prototype']['fields'] = $this->getFieldsFromNode($node->getPrototype());
+            if (!$skipChildren) {
+                $config['prototype'] = $this->getConfigFromNode($node->getPrototype());
             }
+        }
+        elseif ($node instanceof ArrayNode && !$skipChildren) {
+            $config['fields'] = $this->getFieldsFromNode($node);
         }
 
         return $config;
