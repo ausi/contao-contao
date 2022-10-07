@@ -58,6 +58,8 @@ doctrine:
         types:
             binary_string:
                 class: Contao\CoreBundle\Doctrine\DBAL\Types\BinaryStringType
+            ascii_bin:
+                class: Contao\CoreBundle\Doctrine\DBAL\Types\AsciiBinType
     orm:
         auto_mapping: true
         auto_generate_proxy_classes: false
