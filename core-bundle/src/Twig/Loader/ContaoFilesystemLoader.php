@@ -114,15 +114,15 @@ class ContaoFilesystemLoader implements LoaderInterface, ResetInterface
             $extendedTemplate = $match[1];
         }
 
-        // Use the default path of the template if it extends itself
-        if ($extendedTemplate && "@Contao/$extendedTemplate.html5" === $name) {
+        if ($extendedTemplate) {
+            // Look up the blocks of the parent template if present
+            if ("@Contao/$extendedTemplate.html5" !== $name) {
+                return new Source($this->getSourceContext("@Contao/$extendedTemplate.html5")->getCode(), $templateName, $path);
+            }
+
+            // Use the default path of the template if it extends itself
             $this->framework->initialize();
             $path = $this->framework->getAdapter(TemplateLoader::class)->getDefaultPath($extendedTemplate, 'html5');
-        }
-
-        // Look up the blocks of the parent template if present
-        if ($extendedTemplate && "@Contao/$extendedTemplate.html5" !== $name) {
-            return new Source($this->getSourceContext("@Contao/$extendedTemplate.html5")->getCode(), $templateName, $path);
         }
 
         preg_match_all('/\$this\s*->\s*block\s*\(\s*[\'"]([a-z0-9_-]+)[\'"]\s*\)/i', (string) file_get_contents($path), $matches);
