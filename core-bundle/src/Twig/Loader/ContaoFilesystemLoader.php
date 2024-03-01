@@ -108,22 +108,20 @@ class ContaoFilesystemLoader implements LoaderInterface, ResetInterface
             return new Source(file_get_contents($path), $templateName, $path);
         }
 
-        $getExtendedTemplate = static function ($path): string|null {
-            if (1 === preg_match('/\$this\s*->\s*extend\s*\(\s*[\'"]([a-z0-9_-]+)[\'"]\s*\)/i', (string) file_get_contents($path), $match)) {
-                return $match[1];
-            }
+        $extendedTemplate = null;
 
-            return null;
-        };
+        if (preg_match('/\$this\s*->\s*extend\s*\(\s*[\'"]([a-z0-9_-]+)[\'"]\s*\)/i', (string) file_get_contents($path), $match)) {
+            $extendedTemplate = $match[1];
+        }
 
         // Use the default path of the template if it extends itself
-        if (($extendedTemplate = $getExtendedTemplate($path)) && "@Contao/$extendedTemplate.html5" === $name) {
+        if ($extendedTemplate && "@Contao/$extendedTemplate.html5" === $name) {
             $this->framework->initialize();
             $path = $this->framework->getAdapter(TemplateLoader::class)->getDefaultPath($extendedTemplate, 'html5');
         }
 
         // Look up the blocks of the parent template if present
-        if (($extendedTemplate = $getExtendedTemplate($path)) && "@Contao/$extendedTemplate.html5" !== $name) {
+        if ($extendedTemplate && "@Contao/$extendedTemplate.html5" !== $name) {
             return new Source($this->getSourceContext("@Contao/$extendedTemplate.html5")->getCode(), $templateName, $path);
         }
 
