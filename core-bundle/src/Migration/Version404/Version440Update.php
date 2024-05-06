@@ -36,15 +36,7 @@ class Version440Update extends AbstractMigration
 
     public function shouldRun(): bool
     {
-        $schemaManager = $this->connection->createSchemaManager();
-
-        if (!$schemaManager->tablesExist(['tl_content'])) {
-            return false;
-        }
-
-        $columns = $schemaManager->listTableColumns('tl_content');
-
-        return !isset($columns['imagetitle']);
+        return $this->tableExistsWithoutColumns($this->connection, 'tl_content', ['imagetitle']);
     }
 
     public function run(): MigrationResult

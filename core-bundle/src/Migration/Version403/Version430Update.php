@@ -36,15 +36,7 @@ class Version430Update extends AbstractMigration
 
     public function shouldRun(): bool
     {
-        $schemaManager = $this->connection->createSchemaManager();
-
-        if (!$schemaManager->tablesExist(['tl_layout'])) {
-            return false;
-        }
-
-        $columns = $schemaManager->listTableColumns('tl_layout');
-
-        return !isset($columns['combinescripts']);
+        return $this->tableExistsWithoutColumns($this->connection, 'tl_layout', ['combinescripts']);
     }
 
     public function run(): MigrationResult

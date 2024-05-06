@@ -44,9 +44,7 @@ class Version410Update extends AbstractMigration
             return false;
         }
 
-        $columns = $schemaManager->listTableColumns('tl_user');
-
-        return !isset($columns['imagesizes']);
+        return !$this->columnsExist($this->connection, 'tl_user', ['imagesizes']);
     }
 
     public function run(): MigrationResult

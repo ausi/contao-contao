@@ -35,15 +35,7 @@ class Version450Update extends AbstractMigration
 
     public function shouldRun(): bool
     {
-        $schemaManager = $this->connection->createSchemaManager();
-
-        if (!$schemaManager->tablesExist(['tl_layout'])) {
-            return false;
-        }
-
-        $columns = $schemaManager->listTableColumns('tl_layout');
-
-        return !isset($columns['externaljs']);
+        return $this->tableExistsWithoutColumns($this->connection, 'tl_layout', ['externaljs']);
     }
 
     public function run(): MigrationResult
